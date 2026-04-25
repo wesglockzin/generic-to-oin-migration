@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OIN Migration — Action Log</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"/>
+    <style>
+        :root { font-size: 87.5%; }
+        body { margin: 0; background: #0d1117; color: #c9d1d9; }
+        .top-bar {
+            display: flex; align-items: center; gap: 1rem;
+            padding: 0.75rem 1.25rem; border-bottom: 1px solid #21262d;
+            background: #161b22;
+        }
+        .top-bar h1 { margin: 0; font-size: 1rem; color: #58a6ff; }
+        .top-bar a { font-size: 0.82em; color: #8b949e; text-decoration: none; }
+        .top-bar a:hover { color: #c9d1d9; }
+        .controls { padding: 0.5rem 1.25rem; display: flex; gap: 0.5rem; align-items: center; background: #161b22; border-bottom: 1px solid #21262d; }
+        .controls input { font-size: 0.82em; padding: 0.2rem 0.5rem; background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; border-radius: 4px; width: 280px; }
+        .controls label { font-size: 0.8em; color: #8b949e; display: flex; align-items: center; gap: 0.3rem; }
+        #log-table { width: 100%; border-collapse: collapse; font-family: monospace; font-size: 0.78em; }
+        #log-table th { position: sticky; top: 0; background: #161b22; padding: 0.4rem 0.75rem; text-align: left; color: #8b949e; border-bottom: 1px solid #21262d; font-weight: 600; white-space: nowrap; }
+        #log-table td { padding: 0.25rem 0.75rem; border-bottom: 1px solid #21262d22; vertical-align: top; white-space: nowrap; }
+        #log-table tr[data-action] { cursor: pointer; }
+        #log-table tr:hover td { background: #161b2260; }
+        .col-time   { color: #6e7681; width: 160px; }
+        .col-env    { width: 50px; }
+        .col-action { width: 110px; font-weight: 600; }
+        .col-label  { color: #e6edf3; max-width: 340px; overflow: hidden; text-overflow: ellipsis; }
+        .col-outcome{ width: 90px; }
+        .col-detail { color: #8b949e; max-width: 500px; overflow: hidden; text-overflow: ellipsis; }
+        .expand-row td { background: #1c2333 !important; padding: 0.5rem 0.75rem 0.75rem 2.5rem; color: #c9d1d9; white-space: pre-wrap; word-break: break-word; font-size: 0.82em; border-bottom: 2px solid #30363d; }
+
+        .env-dev  { color: #79c0ff; }
+        .env-stg  { color: #ffa657; }
+        .env-prod { color: #ff7b72; }
+
+        .act-scan      { color: #79c0ff; }
+        .act-ai_review { color: #d2a8ff; }
+        .act-convert   { color: #56d364; }
+        .act-stamp     { color: #e3b341; }
+        .act-sp_config { color: #58a6ff; }
+        .act-note      { color: #8b949e; }
+
+        .out-ok      { color: #56d364; }
+        .out-skipped { color: #8b949e; }
+        .out-failed  { color: #ff7b72; }
+        .out-confirmed { color: #56d364; }
+        .out-suggested { color: #e3b341; }
+        .out-review_needed { color: #ffa657; }
+        .out-no_oin  { color: #ff7b72; }
+
+        .empty { text-align: center; padding: 3rem; color: #6e7681; font-style: italic; }
+        #count { font-size: 0.78em; color: #6e7681; margin-left: auto; }
+    </style>
+</head>
+<body>
+<div class="top-bar">
+    <h1>OIN Migration — Action Log</h1>
+    <a href="/">← Back to tool</a>
+    <span id="count"></span>
+</div>
+<div class="controls">
+    <input type="search" id="filter" placeholder="Filter by app, action, outcome…" oninput="applyFilter()">
+    <label><input type="checkbox" id="chk-errors" onchange="applyFilter()"> Failures only</label>
+    <label><input type="checkbox" id="chk-ai" onchange="applyFilter()"> AI Review only</label>
+    <button onclick="location.reload()" style="font-size:0.78em; padding:0.2rem 0.6rem; margin-left:0.5rem">Refresh</button>
+</div>
+
+<table id="log-table">
+    <thead>
+        <tr>
+            <th class="col-time">Timestamp</th>
+            <th class="col-env">Env</th>
+            <th class="col-action">Action</th>
+            <th class="col-label">App / Subject</th>
+            <th class="col-outcome">Outcome</th>
+            <th class="col-detail">Detail</th>
+        </tr>
+    </thead>
+    <tbody id="log-body">
+    {% if lines %}
+        {% for line in lines|reverse %}
+        {% set parts = line.strip().split('|') %}
+        {% if parts|length >= 5 %}
+        {% set ts     = parts[0].strip() %}
+        {% set env    = parts[1].strip() %}
+        {% set action = parts[2].strip() %}
+        {% set label  = parts[3].strip() %}
+        {% set outcome= parts[4].strip() %}
+        {% set detail = parts[5].strip() if parts|length > 5 else '' %}
+        <tr data-action="{{ action }}" data-outcome="{{ outcome }}" data-text="{{ line|lower }}" data-detail="{{ detail }}" onclick="toggleExpand(this)">
+            <td class="col-time">{{ ts }}</td>
+            <td class="col-env {{ 'env-' + env.lower() }}">{{ env }}</td>
+            <td class="col-action {{ 'act-' + action.lower() }}">{{ action }}</td>
+            <td class="col-label" title="{{ label }}">{{ label }}</td>
+            <td class="col-outcome {{ 'out-' + outcome.lower() }}">{{ outcome }}</td>
+            <td class="col-detail">{{ detail }}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+    {% else %}
+        <tr><td colspan="6" class="empty">No actions logged yet.</td></tr>
+    {% endif %}
+    </tbody>
+</table>
+
+<script>
+function toggleExpand(row) {
+    const next = row.nextElementSibling;
+    if (next && next.classList.contains('expand-row')) {
+        next.remove();
+        return;
+    }
+    const detail = row.dataset.detail || '';
+    if (!detail) return;
+    const tr = document.createElement('tr');
+    tr.className = 'expand-row';
+    const td = document.createElement('td');
+    td.colSpan = 6;
+    td.textContent = detail;
+    tr.appendChild(td);
+    row.insertAdjacentElement('afterend', tr);
+}
+
+function applyFilter() {
+    const q       = document.getElementById('filter').value.toLowerCase();
+    const errOnly = document.getElementById('chk-errors').checked;
+    const aiOnly  = document.getElementById('chk-ai').checked;
+    let visible = 0;
+    document.querySelectorAll('#log-body tr[data-action]').forEach(row => {
+        const text    = row.dataset.text || '';
+        const action  = row.dataset.action.toLowerCase();
+        const outcome = row.dataset.outcome.toLowerCase();
+        const matchQ  = !q || text.includes(q);
+        const matchErr = !errOnly || outcome === 'failed';
+        const matchAi  = !aiOnly  || action === 'ai_review';
+        const show = matchQ && matchErr && matchAi;
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+    document.getElementById('count').textContent = `${visible} entr${visible === 1 ? 'y' : 'ies'}`;
+}
+applyFilter();
+</script>
+</body>
+</html>
