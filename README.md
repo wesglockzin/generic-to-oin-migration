@@ -2,6 +2,20 @@
 
 A local Flask web tool for migrating Okta applications to their OIN (Okta Integration Network) catalog equivalents. Identifies candidates, drives the conversion via the Okta API, and tracks per-app progress.
 
+---
+
+### About this repo
+
+This is a sanitized snapshot of internal tooling, published via an
+automated review-and-publish pipeline. Internal identifiers
+(subscription IDs, resource group names, internal hostnames, email
+addresses) are deliberately replaced with placeholders like
+`your-subscription-id`, `your-acr-name`, and `your-org`. Replace
+these with values appropriate to your environment when adapting
+the code.
+
+---
+
 ## Overview
 
 Custom Okta SAML/OIDC apps that mirror well-known SaaS products often exist in the OIN catalog with vendor-blessed configuration. Migrating from a custom app to its OIN equivalent improves long-term maintenance (vendor handles config drift, certificate rotation prompts, etc.) but requires careful handling of metadata, group assignments, and policy mappings.
